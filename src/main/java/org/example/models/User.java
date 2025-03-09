@@ -30,7 +30,7 @@ public class User {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToOne(mappedBy = "user")
+    @OneToOne(mappedBy = "user",  fetch = FetchType.LAZY, optional = false)
     private Profile profile;
 
     @ManyToMany(fetch = FetchType.LAZY)
