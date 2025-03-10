@@ -11,43 +11,50 @@ import java.util.List;
 public class UserRepository extends AbstractRepository<User> {
 
     protected UserRepository(EntityManager em) {
-        super(User.class, em);
+        super(em);
     }
 
     public List<User> findAll(Long id, String name) {
 
+        // Get Criteria Builder
+        CriteriaBuilder cb = getEm().getCriteriaBuilder();
+
+        // Create criteria query to spec the Query
+        CriteriaQuery<User> cq = cb.createQuery(User.class);
+
+        // Define a root for the query, and add needed fetches
+        Root<User> root = cq.from(User.class);
+        root.fetch("hobbies");
+        root.fetch("profile");
+
+        // Define an empty dynamic predicate array
         List<Predicate> predicates = new ArrayList<>();
 
         // Filter if id filter was passed
         if (id != null) {
-            predicates.add(getCb().equal(getRoot().get("id"), id));
+            predicates.add(cb.equal(root.get("id"), id));
         }
 
         // Filter based on name in profile
         if (name != null && !name.isBlank()) {
-            Predicate like = getNameLikePredicate(name);
-            predicates.add(like);
+            // Create a profile join to define predicates on
+            Join<User, Profile> join = root.join("profile");
+
+            // Concat first and last name as one Expression<String>
+            Expression<String> expression = cb.concat(
+                    cb.concat(join.get("firstName"), " "),
+                    join.get("lastName")
+            );
+
+            // Perform like on the concatenated expression
+            predicates.add(cb.like(expression, "%" + name + "%"));
         }
 
-        // And all predicates and add them to criteria query
-        getCq().where(getCb().and(predicates.toArray(Predicate[]::new)));
+        // `And` all predicates and add them to criteria query
+        cq.where(cb.and(predicates.toArray(Predicate[]::new)));
 
         // Return result
-        return getEm().createQuery(getCq()).getResultList();
-    }
-
-    @Override
-    protected String[] getDefaultFetches() {
-        return new String[]{"profile", "hobbies"};
-    }
-
-    private Predicate getNameLikePredicate(String name) {
-        Join<User, Profile> join = getRoot().join("profile");
-        Expression<String> expression = getCb().concat(
-                getCb().concat(join.get("firstName"), " "),
-                join.get("lastName")
-        );
-        return getCb().like(expression, "%" + name + "%");
+        return getEm().createQuery(cq).getResultList();
     }
 
 }

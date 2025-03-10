@@ -1,5 +1,6 @@
 package org.example;
 
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 
@@ -19,7 +20,8 @@ public class Main {
         String name = scanner.nextLine();
 
         try (EntityManagerFactory emf = Persistence.createEntityManagerFactory("experiment")) {
-            UserRepository repository = new UserRepository(emf.createEntityManager());
+            EntityManager entityManager = getEntityManager(emf);
+            UserRepository repository = new UserRepository(entityManager);
             repository.findAll(userId, name).forEach(user -> {
                 System.out.println("User Info");
                 System.out.println("User: " + user);
@@ -30,7 +32,11 @@ public class Main {
                 System.out.println("Hobby Info");
                 System.out.println("Hobbies: " + user.getHobbies());
             });
-
+            entityManager.close();
         }
+    }
+
+    private static EntityManager getEntityManager(EntityManagerFactory emf) {
+        return emf.createEntityManager();
     }
 }
